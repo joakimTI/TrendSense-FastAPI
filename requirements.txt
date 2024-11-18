@@ -1,0 +1,3 @@
+fastapi
+dill
+uvicorn
