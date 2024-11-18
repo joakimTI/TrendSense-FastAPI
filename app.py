@@ -154,3 +154,4 @@ def recommend_items(product_id, num_recommendations=5):
     # Retrieve product details
     recommended_products = products[products['id'].isin(recommended_ids)].to_dict(orient='records')
     return recommended_products
+
