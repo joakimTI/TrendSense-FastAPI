@@ -2,6 +2,15 @@ from fastapi import FastAPI, HTTPException
 import dill
 from fastapi.middleware.cors import CORSMiddleware
 
+# Assuming df is your DataFrame
+def process_dataframe(df):
+    # Group by category and sort by ratings to get top products in each category
+    top_rated_by_category = (
+        df.sort_values(by="ratings_count", ascending=False)
+          .groupby("Category")
+          .head(5)  # Adjust this number based on the number of top products you want per category
+    )
+    return top_rated_by_category.to_dict(orient="records")
 
 
 
@@ -33,8 +42,8 @@ product_ids = similarity_data['ids']
 # Load your data
 products = dill.load(open("products_list.pkl", "rb"))
 sentiments = dill.load(open("sentiments.pkl", "rb"))
+top_rated = process_dataframe(products)
 
-# top_rated_products = dill.load(open('top_rated_products.pkl'))
 
 # Define the root endpoint
 @app.get("/")
@@ -69,6 +78,17 @@ def get_reviews_by_sentiment(product_id: int):
     grouped_reviews = product_reviews.groupby("sentiment")["review"].apply(list).to_dict()
     
     return grouped_reviews
+@app.get("/categories")
+def get_categories():
+    
+    categories = products['Category'].unique().tolist()
+    return {"categories": categories}
+
+@app.get("/products_by_category/{category}")
+def get_products_by_category(category: str):
+    top_rated_by_category = (products.sort_values(by="ratings_count", ascending=False).groupby("Category").head(5))  # Adjust this number based on the number of top products you want per category)
+    filtered_products = top_rated_by_category[top_rated_by_category['Category'] == category]
+    return {"products": filtered_products.to_dict(orient="records")}
 
 # Assuming df is your DataFrame
 def process_dataframe(df):
@@ -80,62 +100,7 @@ def process_dataframe(df):
     )
     return top_rated_by_category.to_dict(orient="records")
 
-# Build a recommendation Function
-# def recommend_items(product_id, num_recommendations=5):
-#     # Combine the features
-#     products['combined_features'] = (products['product_name'].fillna('') + products['brand'].fillna('') + products['review_title'].fillna('') + products['review'].fillna(''))
-#     # Initialize TF-IDF Vectorizer
-#     tfidf = TfidfVectorizer(stop_words='english')
-#     tfidf_matrix = tfidf.fit_transform(products['combined_features'])
 
-#     # Set the number of latent features (e.g., 50)
-#     n_components = 50
-
-#     # Initialize and apply TruncatedSVD
-#     svd = TruncatedSVD(n_components=n_components, random_state=42)
-#     item_features_matrix = svd.fit_transform(tfidf_matrix)
-    
-#     # Calculate cosine similarity on the SVD-transformed matrix
-#     cosine_sim = cosine_similarity(item_features_matrix)
-#     # Convert to DataFrame for ease of use
-#     cosine_sim_df = pd.DataFrame(cosine_sim, index=products['id'], columns=products['id'])
-#     # Check if the product exists in the similarity DataFrame
-#     if product_id not in cosine_sim_df.columns:
-#         print(f"Product '{product_id}' not found in dataset.")
-#         return []
-    
-#     # Get similarity scores for the product and sort by descending order
-#     sim_scores = cosine_sim_df[product_id].sort_values(ascending=False)
-    
-#     # Exclude the product itself from recommendations
-#     sim_scores = sim_scores.drop(product_id)
-    
-#     # Get the top recommendations based on similarity scores
-#     top_recommendations_ids = sim_scores.head(num_recommendations).index.tolist()
-
-#     # Retrieve the recommended product details
-#     recommended_products = products[products['id'].isin(top_recommendations_ids)].to_dict(orient='records')
-
-#     return recommended_products
-
-# def recommend_items(product_id, num_recommendations=5):
-#     # Validate product_id
-#     if product_id not in product_ids:
-#         raise HTTPException(status_code=404, detail="Product not found")
-
-#     # Find index of the product in the precomputed matrix
-#     product_idx = list(product_ids).index(product_id)
-
-#     # Get similarity scores and sort
-#     sim_scores = cosine_sim[product_idx]
-#     top_indices = sim_scores.argsort()[::-1][1:num_recommendations + 1]  # Exclude self
-
-#     # Map indices back to product IDs
-#     recommended_ids = [product_ids[i] for i in top_indices]
-
-#     # Retrieve product details
-#     recommended_products = products[products['id'].isin(recommended_ids)].to_dict(orient='records')
-#     return recommended_products
 def recommend_items(product_id, num_recommendations=5):
     # Validate product_id
     if product_id not in product_ids:
