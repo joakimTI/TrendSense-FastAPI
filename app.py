@@ -96,7 +96,7 @@ def process_dataframe(df):
     top_rated_by_category = (
         df.sort_values(by="ratings_count", ascending=False)
           .groupby("Category")
-          .head(5)  # Adjust this number based on the number of top products you want per category
+          .head(20)  # Adjust this number based on the number of top products you want per category
     )
     return top_rated_by_category.to_dict(orient="records")
 
